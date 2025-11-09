@@ -75,16 +75,30 @@ def submit_lycee():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/data_lycee')
-def data_lycee():
+@app.route('/data_lycee_sheet')
+def data_lycee_sheet():
+    """Retourne les données directement depuis le Google Sheet du lycée"""
     try:
-        if os.path.exists("data_lycee.json"):
-            with open("data_lycee.json", "r", encoding="utf-8") as f:
-                return jsonify(json.load(f))
-        else:
-            return jsonify([])
+        creds_json = os.environ.get("GOOGLE_CREDS_JSON")
+        if not creds_json:
+            return jsonify({"error": "GOOGLE_CREDS_JSON manquant"}), 500
+
+        creds_dict = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(creds_dict, scopes=[
+            "https://www.googleapis.com/auth/spreadsheets"
+        ])
+        client = gspread.authorize(creds)
+
+        SHEET_ID = "1lEytg3QTMRzu4jYP2QotmVE8XuZCt_l4Ts1Lznf415k"  # ton Google Sheet lycée
+        sheet = client.open_by_key(SHEET_ID).sheet1
+
+        # 📊 Récupération des données
+        records = sheet.get_all_records()
+        return jsonify(records)
+
     except Exception as e:
-        print(f"Erreur lecture data_lycee: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
