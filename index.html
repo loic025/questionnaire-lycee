@@ -170,9 +170,26 @@
           container.appendChild(sub2);
           } else if (index === 34) {
           const sub3 = document.createElement('div');
-          sub3.className = 'subgroup-title';
-          sub3.textContent = "Si tu as l’impression d’être embêté(e) souvent dans ton établissement scolaire ou sur Internet :";
+           sub3.className = 'subgroup-title';
+          sub3.style.cursor = "pointer";
+          sub3.style.color = "#0056b3";
+          sub3.textContent = "▶ Si tu as l’impression d’être embêté(e) souvent dans ton établissement scolaire ou sur Internet (clique ici):";
+
+          // 🔹 Crée le conteneur pour les questions 35–38 (caché par défaut)
+          const optionalSection = document.createElement('div');
+          optionalSection.id = "optionalQuestions";
+          optionalSection.style.display = "none";
+          optionalSection.style.marginLeft = "20px";
+
+          // 🔹 Quand on clique sur le titre → on ouvre / ferme la section
+          sub3.addEventListener('click', () => {
+          const isVisible = optionalSection.style.display === "block";
+          optionalSection.style.display = isVisible ? "none" : "block";
+          sub3.textContent = (isVisible ? "▶" : "▼") + " Si tu as l’impression d’être embêté(e) souvent dans ton établissement scolaire ou sur Internet (clique ici):";
+          });
+
           container.appendChild(sub3);
+          container.appendChild(optionalSection);
           } else if (index === 38) {
           const sub4 = document.createElement('div');
           sub4.className = 'subgroup-title';
@@ -213,7 +230,15 @@
         }
       }
         div.appendChild(responses);
-        container.appendChild(div);
+       // 🔹 Si la question fait partie du bloc facultatif (35–38)
+if (index >= 34 && index <= 37) {
+  document.getElementById("optionalQuestions")?.appendChild(div);
+  return; // On arrête ici pour ne pas la remettre dans le flux normal
+}
+
+// 🔹 Sinon, on l’ajoute normalement dans la page
+container.appendChild(div);
+
       });
     }
     document.getElementById('questionnaireForm').addEventListener('submit', async (e) => {
