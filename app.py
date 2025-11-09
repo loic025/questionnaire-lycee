@@ -11,10 +11,17 @@ def append_to_google_sheet(data, target="college"):
         else:
             SHEET_ID = "1VpoN3BzCza5XPxyErQ8BGvNM9lRbnZtSsHQUql-Hikw"  # ID Google Sheet collège
 
-        # Connexion à Google Sheets
-        creds = Credentials.from_service_account_file("credentials.json", scopes=[
-            "https://www.googleapis.com/auth/spreadsheets"
-        ])
+ # ✅ Lire les credentials depuis Render
+        creds_json = os.environ.get("GOOGLE_CREDS_JSON")
+        if not creds_json:
+            raise Exception("Variable GOOGLE_CREDS_JSON manquante !")
+
+        creds_dict = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(
+            creds_dict,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
+        
         client = gspread.authorize(creds)
         sheet = client.open_by_key(SHEET_ID).sheet1
 
@@ -24,6 +31,7 @@ def append_to_google_sheet(data, target="college"):
 
     except Exception as e:
         print(f"[GOOGLE SHEET] Erreur lors de l'envoi ({target}) ❌ : {e}")
+        traceback.print_exc()
 
 app = Flask(__name__, static_folder='static')
 
