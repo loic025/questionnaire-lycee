@@ -24,6 +24,8 @@ def append_to_google_sheet(data, target="college"):
     except Exception as e:
         print(f"[GOOGLE SHEET] Erreur lors de l'envoi ({target}) ❌ : {e}")
 
+app = Flask(__name__, static_folder='static')
+
 DATA_FILE = 'donnees.csv'
 # Tu peux aussi définir ce mot de passe dans Render (Environment Variables) sous RESET_PASSWORD
 RESET_PASSWORD = os.environ.get('RESET_PASSWORD', 'enseignant2024')
