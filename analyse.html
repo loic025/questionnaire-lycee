@@ -293,7 +293,7 @@
       }
     }
 async function loadData() {
-  const res = await fetch('/data');
+  const res = await fetch('/data_lycee');
   const rows = await res.json();
       const filterEleve = document.getElementById("filterEleve");
       const previousEleve = filterEleve.value;
