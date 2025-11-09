@@ -14,7 +14,7 @@ def append_to_google_sheet(data, target="college"):
  # ✅ Lire les credentials depuis Render
         creds_json = os.environ.get("GOOGLE_CREDS_JSON")
         if not creds_json:
-            raise Exception("Variable GOOGLE_CREDS_JSON manquante !")
+            raise Exception("Variable GOOGLE_CREDS_JSON manquante sur Render")
 
         creds_dict = json.loads(creds_json)
         creds = Credentials.from_service_account_info(
