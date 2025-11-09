@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
-import csv, os
+import csv, os, json
 
 app = Flask(__name__, static_folder='static')
 
@@ -17,57 +17,56 @@ def index():
 def analyse():
     return send_from_directory('.', 'analyse.html')
 
-
-@app.route('/submit', methods=['POST'])
-def submit():
+@app.route('/submit_lycee', methods=['POST'])
+def submit_lycee():
     data = request.get_json() or {}
-    print(f"[SUBMIT] reçu {len(data)} champs")
-
-    # Colonnes fixes pour tous les enregistrements
-    fieldnames = ['nomEleve', 'classe', 'sexe', 'annee'] + [f"q{i}" for i in range(1, 45)]
-
-    # Si le fichier est vide ou inexistant → on recrée avec l’en-tête
-    write_header = not os.path.exists(DATA_FILE) or os.path.getsize(DATA_FILE) == 0
-
-    # Normaliser la ligne (valeurs manquantes = '')
-    row = {k: data.get(k, '') for k in fieldnames}
+    print(f"[SUBMIT LYCÉE] reçu {len(data)} champs")
 
     try:
-        with open(DATA_FILE, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            if write_header:
-                print("[SUBMIT] écriture de l’en-tête CSV")
-                writer.writeheader()
-            writer.writerow(row)
+        # On enregistre dans un fichier différent
+        if os.path.exists("data_lycee.json"):
+            with open("data_lycee.json", "r", encoding="utf-8") as f:
+                all_data = json.load(f)
+        else:
+            all_data = []
 
-        print("[SUBMIT] ligne ajoutée avec succès")
-        return jsonify({'status': 'ok'})
+        all_data.append(data)
+
+        with open("data_lycee.json", "w", encoding="utf-8") as f:
+            json.dump(all_data, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"status": "ok"})
     except Exception as e:
-        print(f"[SUBMIT][ERROR] {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        print(f"Erreur enregistrement lycée: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route('/data')
-def data():
-    if not os.path.exists(DATA_FILE):
-        return jsonify([])
-    with open(DATA_FILE, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        return jsonify(list(reader))
+@app.route('/data_lycee')
+def data_lycee():
+    try:
+        if os.path.exists("data_lycee.json"):
+            with open("data_lycee.json", "r", encoding="utf-8") as f:
+                return jsonify(json.load(f))
+        else:
+            return jsonify([])
+    except Exception as e:
+        print(f"Erreur lecture data_lycee: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route('/reset', methods=['POST'])
-def reset():
+
+@app.route('/reset_lycee', methods=['POST'])
+def reset_lycee():
     payload = request.get_json() or {}
     pwd = payload.get('password', '')
     if pwd != RESET_PASSWORD:
         return jsonify({'status': 'error', 'message': 'Mot de passe incorrect.'}), 403
 
-    # Réinitialise le fichier (on supprime pour repartir propre, l’en-tête sera réécrit au prochain submit)
-    if os.path.exists(DATA_FILE):
-        os.remove(DATA_FILE)
+    # Réinitialise le fichier JSON du lycée
+    if os.path.exists("data_lycee.json"):
+        os.remove("data_lycee.json")
 
-    return jsonify({'status': 'ok', 'message': 'Fichier réinitialisé.'})
+    return jsonify({'status': 'ok', 'message': 'Fichier lycée réinitialisé.'})
 
 
 # Route statique pour le logo etc.
