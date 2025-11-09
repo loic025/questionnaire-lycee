@@ -120,12 +120,11 @@
         <label>Année :
   <select id="filterAnnee">
     <option value="">Toutes</option>
-    <option>2009 ou après</option>
+    <option>2011 ou après</option>
+    <option>2010</option>
+    <option>2009</option>
     <option>2008</option>
-    <option>2007</option>
-    <option>2006</option>
-    <option>2005</option>
-    <option>2004 ou avant</option>
+    <option>2007 ou avant</option>
   </select>
 </label>
       <label>Élève :
@@ -334,19 +333,17 @@ return `<option value="${i}">${label}</option>`;
         filtered = [rows[parseInt(eleveIndex)]];
       } else {
     // 🔹 Sinon on applique les filtres classe/sexe avec normalisation
-  const norm = (s) => (s ?? "")
+const normalizeClass = (str) =>
+  (str ?? "")
     .toString()
     .trim()
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "")
-    .replace(/e(?=\d)/g, "e");
+    .replace(/\s+/g, ""); // on garde juste sans espaces
 
-  filtered = rows.filter(row =>
-  (!classe || norm(row.classe) === norm(classe)) &&
-  (!sexe || norm(row.sexe) === norm(sexe)) &&
-  (!annee || norm(row.annee) === norm(annee))
+filtered = rows.filter(row =>
+  (!classe || normalizeClass(row.classe) === normalizeClass(classe)) &&
+  (!sexe || (row.sexe || "").trim().toLowerCase() === sexe.toLowerCase()) &&
+  (!annee || (row.annee || "").trim().toLowerCase() === annee.toLowerCase())
 );
 
   // 🔹 Si aucune donnée trouvée, on tente un match partiel (ex: "3e" dans "3è1")
