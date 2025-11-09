@@ -248,7 +248,7 @@ container.appendChild(div);
       formData.forEach((value, key) => {
         data[key] = value;
       });
-      await fetch('/submit', {
+      await fetch('/submit_lycee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
