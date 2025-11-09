@@ -6,10 +6,10 @@ from google.oauth2.service_account import Credentials
 # ✅ Ajoute ici :
 def append_to_google_sheet(data, target="college"):
     try:
-    if target == "lycee":
-        SHEET_ID = "lEytg3QTMRzu4jYP2QotmVE8XuZCt_l4Ts1Lznf415k"  # ID Google Sheet lycée
-    else:
-        SHEET_ID = "1VpoN3BzCza5XPxyErQ8BGvNM9lRbnZtSsHQUql-Hikw"  # ID Google Sheet collège
+        if target == "lycee":
+            SHEET_ID = "lEytg3QTMRzu4jYP2QotmVE8XuZCt_l4Ts1Lznf415k"  # ID Google Sheet lycée
+        else:
+            SHEET_ID = "1VpoN3BzCza5XPxyErQ8BGvNM9lRbnZtSsHQUql-Hikw"  # ID Google Sheet collège
 
     # Connexion à Google Sheets
     creds = Credentials.from_service_account_file("credentials.json", scopes=[
