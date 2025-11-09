@@ -11,13 +11,14 @@ def append_to_google_sheet(data, target="college"):
         else:
             SHEET_ID = "1VpoN3BzCza5XPxyErQ8BGvNM9lRbnZtSsHQUql-Hikw"  # ID Google Sheet collège
 
-    # Connexion à Google Sheets
-    creds = Credentials.from_service_account_file("credentials.json", scopes=[
-        "https://www.googleapis.com/auth/spreadsheets"
-    ])
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key(SHEET_ID).sheet1
+        # Connexion à Google Sheets
+        creds = Credentials.from_service_account_file("credentials.json", scopes=[
+            "https://www.googleapis.com/auth/spreadsheets"
+        ])
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(SHEET_ID).sheet1
 
+        # Ajout des données
         sheet.append_row(list(data.values()))
         print(f"[GOOGLE SHEET] Données envoyées ({target}) ✅")
 
