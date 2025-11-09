@@ -71,6 +71,7 @@
       <button onclick="exportFilteredCSV()">🎯 Exporter réponses filtrées</button>
       <button onclick="window.print()">📄 Exporter en PDF</button>
       <button id="resetButton" onclick="resetData()">🗑 Réinitialiser les données</button>
+      <button id="reloadDataBtn" class="reload-btn">🔄 Recharger les données</button>
     </div>
 
     <div class="filters">
@@ -116,6 +117,17 @@
           <option>Autre</option>
         </select>
       </label>
+        <label>Année :
+  <select id="filterAnnee">
+    <option value="">Toutes</option>
+    <option>2009 ou après</option>
+    <option>2008</option>
+    <option>2007</option>
+    <option>2006</option>
+    <option>2005</option>
+    <option>2004 ou avant</option>
+  </select>
+</label>
       <label>Élève :
         <select id="filterEleve"></select>
       </label>
@@ -180,54 +192,64 @@
       "Connais-tu un(e) élève harcélé(e) dans ton établissement ?",
       "Connais-tu un(e) élève harcelé(e) dans ta classe ?"
     ];
+
+ let activeCharts = [];
     
     function renderCharts(data) {
       const container = document.getElementById("chartsContainer");
-      container.innerHTML = "";
+      // 🧹 1️⃣ Supprimer les anciens graphiques
+  if (activeCharts.length) {
+    activeCharts.forEach(chart => {
+      try { chart.destroy(); } catch (e) {}
+    });
+    activeCharts = [];
+  }
 
-      if (!data.length) {
-        container.innerHTML = "<p>Aucune donnée disponible.</p>";
-        return;
-      }
-    // 🔁 Boucle sur toutes les questions
-  for (let q = 1; q <= 44; q++) {
+  // 🧹 2️⃣ Nettoyer le conteneur
+  container.innerHTML = "";
 
-    // 🟢 Cas 1 : Questions Oui / Non (35 à 44)
+  // 🚨 3️⃣ Si pas de données, message et retour
+  if (!data || !data.length) {
+    container.innerHTML = "<p style='color:red; text-align:center;'>Aucune donnée disponible pour ce filtre.</p>";
+    return;
+  }
+
+  // 🔢 4️⃣ Déterminer les questions à afficher
+  const questionValue = parseInt(document.getElementById("filterQuestion").value || "0");
+  const questionsToRender = questionValue ? [questionValue] : Array.from({ length: 44 }, (_, i) => i + 1);
+
+  // 🔁 5️⃣ Boucle sur chaque question
+  for (const q of questionsToRender) {
+    // 🟢 Cas 1 : Oui/Non
     if (q >= 35 && q <= 44) {
-      const oui = data.filter(row => (row[`q${q}`] || "").toLowerCase() === "oui").length;
-      const non = data.filter(row => (row[`q${q}`] || "").toLowerCase() === "non").length;
+      const oui = data.filter(r => (r[`q${q}`] || "").toString().toLowerCase() === "oui").length;
+      const non = data.filter(r => (r[`q${q}`] || "").toString().toLowerCase() === "non").length;
 
       const chartBox = document.createElement("div");
       chartBox.classList.add("chart-box");
       chartBox.innerHTML = `<canvas id="chartQ${q}" width="200" height="200"></canvas>`;
       container.appendChild(chartBox);
 
-      new Chart(document.getElementById(`chartQ${q}`).getContext("2d"), {
+       const chart = new Chart(document.getElementById(`chartQ${q}`).getContext("2d"), {
         type: "pie",
-        data: {
-          labels: ["Oui", "Non"],
-          datasets: [{
-            data: [oui, non],
-            backgroundColor: ["#4CAF50", "#F44336"]
-          }]
-        },
+        data: { labels: ["Oui", "Non"], datasets: [{ data: [oui, non] }] },
         options: {
           plugins: {
-            title: { display: true, text: `Question ${q}` },
+            title: { display: true, text: questionLabels[q - 1] },
             legend: { position: "bottom" }
           }
         }
       });
+
+      activeCharts.push(chart);
       continue;
     }
 
     // 🔵 Cas 2 : Questions à 4 choix (1 à 34)
     const counts = [0, 0, 0, 0];
-    data.forEach(row => {
-      const val = row[`q${q}`];
-      if (val && ["1", "2", "3", "4"].includes(val)) {
-        counts[parseInt(val) - 1]++;
-      }
+    data.forEach(r => {
+      const val = (r[`q${q}`] || "").toString().trim();
+      if (["1", "2", "3", "4"].includes(val)) counts[parseInt(val, 10) - 1]++;
     });
 
     const chartBox = document.createElement("div");
@@ -235,7 +257,22 @@
     chartBox.innerHTML = `<canvas id="chartQ${q}" width="200" height="200"></canvas>`;
     container.appendChild(chartBox);
 
-    renderChart(document.getElementById(`chartQ${q}`), counts, q);
+      const ctx = document.getElementById(`chartQ${q}`).getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels: ["1", "2", "3", "4"],
+        datasets: [{ data: counts }]
+      },
+      options: {
+        plugins: {
+          title: { display: true, text: questionLabels[q - 1] },
+          legend: { position: "bottom" }
+        }
+      }
+    });
+
+    activeCharts.push(chart);
   }
 }
     async function resetData() {
@@ -262,8 +299,17 @@ async function loadData() {
       const previousEleve = filterEleve.value;
       filterEleve.innerHTML = '<option value="">Tous</option>' + rows.map((r, i) => {
         const nom = r.nomEleve && r.nomEleve.trim() !== "" ? r.nomEleve : `Élève ${i + 1}`;
-        const label = `${nom} – ${r.classe} – ${r.sexe}`;
-        return `<option value="${i}">${label}</option>`;
+        / 🔹 Forcer la classe à être une chaîne de texte
+let classe = r.classe;
+if (classe !== undefined && classe !== null) {
+  classe = "'" + String(classe).replace(".0", "").trim();
+}
+
+        classe = classe.replace(/^'/, ""); // supprime l'apostrophe au début si elle existe
+        
+// 🔹 Ajouter l’année dans le label
+const label = `${nom} – ${classe || "?"} – ${r.sexe || "?"} – ${r.annee || ""}`;
+return `<option value="${i}">${label}</option>`;
       }).join('');
       filterEleve.value = previousEleve;
 
@@ -282,16 +328,34 @@ async function loadData() {
       const classe = document.getElementById('filterClasse').value;
       const sexe = document.getElementById('filterSexe').value;
       const eleveIndex = filterEleve.value;
+      const annee = document.getElementById('filterAnnee').value;
 
       let filtered;
       if (eleveIndex !== "") {
         filtered = [rows[parseInt(eleveIndex)]];
       } else {
-        filtered = rows.filter(row =>
-          (!classe || row.classe === classe) &&
-          (!sexe || row.sexe === sexe)
-        );
-      }
+    // 🔹 Sinon on applique les filtres classe/sexe avec normalisation
+  const norm = (s) => (s ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/e(?=\d)/g, "e");
+
+  filtered = rows.filter(row =>
+  (!classe || norm(row.classe) === norm(classe)) &&
+  (!sexe || norm(row.sexe) === norm(sexe)) &&
+  (!annee || norm(row.annee) === norm(annee))
+);
+
+  // 🔹 Si aucune donnée trouvée, on tente un match partiel (ex: "3e" dans "3è1")
+  if (!filtered.length && classe) {
+    const numClasse = classe.match(/\d+[eè]?\d*/)?.[0] || "";
+    filtered = rows.filter(row => norm(row.classe).includes(numClasse));
+  }
+}
 
       const syntheseBlock = document.getElementById('synthese');
       syntheseBlock.innerHTML = "";
@@ -303,7 +367,17 @@ if (syntheseBlock) {
     syntheseBlock.style.display = 'none';
   }
 }
-  
+    // 🔹 Avant d’afficher de nouveaux graphiques, on nettoie l’affichage précédent
+const container = document.getElementById("chartsContainer");
+container.innerHTML = "";
+
+  // 🚨 Si aucune donnée filtrée, on vide et on affiche un message
+if (!filtered || filtered.length === 0) {
+  activeCharts.forEach(chart => chart.destroy());
+  activeCharts = [];
+  container.innerHTML = "<p style='color:red; text-align:center;'>Aucune donnée disponible pour ce filtre.</p>";
+  return;
+}
   // ✅ Ajout clé : affichage des graphiques
   renderCharts(filtered);
   }
@@ -438,7 +512,17 @@ document.getElementById('synthese').insertAdjacentHTML('beforeend', `<p style="t
     document.getElementById("filterSexe").addEventListener("change", loadData);
     document.getElementById("filterQuestion").addEventListener("change", loadData);
     document.getElementById("filterEleve").addEventListener("change", loadData);
+    document.getElementById("filterAnnee").addEventListener("change", loadData);
 
+    // 🆕 Bouton "Recharger les données"
+document.getElementById("reloadDataBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("reloadDataBtn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Rechargement...";
+  await loadData();
+  btn.textContent = "🔄 Recharger les données";
+  btn.disabled = false;
+});
 function exportCSV() {
   fetch('/data')
     .then(response => response.json())
