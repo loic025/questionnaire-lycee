@@ -292,97 +292,84 @@
       }
     }
 async function loadData() {
-  const res = await fetch('/data_lycee_sheet');
+  const res = await fetch('/data_lycee_sheet'); // ✅ lecture depuis Google Sheets
   const rows = await res.json();
-      const filterEleve = document.getElementById("filterEleve");
-      const previousEleve = filterEleve.value;
-      filterEleve.innerHTML = '<option value="">Tous</option>' + rows.map((r, i) => {
-        const nom = r.nomEleve && r.nomEleve.trim() !== "" ? r.nomEleve : `Élève ${i + 1}`;
-let classe = r.classe;
-if (classe !== undefined && classe !== null) {
-  classe = "'" + String(classe).replace(".0", "").trim();
-}
 
-        classe = classe.replace(/^'/, ""); // supprime l'apostrophe au début si elle existe
-        
-// 🔹 Ajouter l’année dans le label
-const label = `${nom} – ${classe || "?"} – ${r.sexe || "?"} – ${r.annee || ""}`;
-return `<option value="${i}">${label}</option>`;
-      }).join('');
-      filterEleve.value = previousEleve;
+  const filterEleve = document.getElementById("filterEleve");
+  const previousEleve = filterEleve.value;
+  filterEleve.innerHTML = '<option value="">Tous</option>' + rows.map((r, i) => {
+    const nom = r.nomEleve && r.nomEleve.trim() !== "" ? r.nomEleve : `Élève ${i + 1}`;
+    let classe = r.classe;
+    if (classe !== undefined && classe !== null) {
+      classe = "'" + String(classe).replace(".0", "").trim();
+    }
+    classe = classe.replace(/^'/, "");
+    const label = `${nom} – ${classe || "?"} – ${r.sexe || "?"} – ${r.annee || ""}`;
+    return `<option value="${i}">${label}</option>`;
+  }).join('');
+  filterEleve.value = previousEleve;
 
-      const filterQuestion = document.getElementById("filterQuestion");
-      if (filterQuestion.length === 0) {
-        filterQuestion.innerHTML = '<option value="">Toutes</option>';
-        questionLabels.forEach((q, i) => {
-    const opt = document.createElement("option");
-    opt.value = i + 1; 
-    opt.textContent = q; 
-    filterQuestion.appendChild(opt);
-        });
-      }
-
-      const questionValue = filterQuestion.value;
-      const classe = document.getElementById('filterClasse').value;
-      const sexe = document.getElementById('filterSexe').value;
-      const eleveIndex = filterEleve.value;
-      const annee = document.getElementById('filterAnnee').value;
-
-      let filtered;
-      if (eleveIndex !== "") {
-        filtered = [rows[parseInt(eleveIndex)]];
-      } else {
-    // 🔹 Sinon on applique les filtres classe/sexe avec normalisation
-const normalizeClass = (str) =>
-  (str ?? "")
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ""); // on garde juste sans espaces
-
-filtered = rows.filter(row =>
-  (!classe || normalizeClass(row.classe) === normalizeClass(classe)) &&
-  (!sexe || (row.sexe || "").trim().toLowerCase() === sexe.toLowerCase()) &&
-  (!annee || (row.annee || "").trim().toLowerCase() === annee.toLowerCase())
-);
-
-  // 🔹 Si aucune donnée trouvée, on tente un match partiel (ex: "3e" dans "3è1")
-  if (!filtered.length && classe) {
-    const numClasse = classe.match(/\d+[eè]?\d*/)?.[0] || "";
-    filtered = rows.filter(row => norm(row.classe).includes(numClasse));
+  // Initialisation du filtre des questions si pas encore fait
+  const filterQuestion = document.getElementById("filterQuestion");
+  if (filterQuestion.length === 0) {
+    filterQuestion.innerHTML = '<option value="">Toutes</option>';
+    questionLabels.forEach((q, i) => {
+      const opt = document.createElement("option");
+      opt.value = i + 1;
+      opt.textContent = q;
+      filterQuestion.appendChild(opt);
+    });
   }
-}
 
-      const syntheseBlock = document.getElementById('synthese');
-      syntheseBlock.innerHTML = "";
-if (syntheseBlock) {
+  const questionValue = filterQuestion.value;
+  const classe = document.getElementById('filterClasse').value;
+  const sexe = document.getElementById('filterSexe').value;
+  const eleveIndex = filterEleve.value;
+  const annee = document.getElementById('filterAnnee').value;
+
+  // 🔹 Normalisation texte pour comparaison plus fiable
+  const norm = (s) => (s || "").toString().trim().toLowerCase().replace(/\s+/g, "");
+
+  let filtered;
+
   if (eleveIndex !== "") {
-    syntheseBlock.style.display = 'block';
+    filtered = [rows[parseInt(eleveIndex)]];
+  } else {
+    filtered = rows.filter(row =>
+      (!classe || norm(row.classe) === norm(classe)) &&
+      (!sexe || norm(row.sexe) === norm(sexe)) &&
+      (!annee || norm(row.annee) === norm(annee))
+    );
+  }
+
+  const container = document.getElementById("chartsContainer");
+  const syntheseBlock = document.getElementById("synthese");
+  const summaryBoxes = document.getElementById("summaryBoxes");
+
+  // 🧹 Nettoyage avant affichage
+  syntheseBlock.innerHTML = "";
+  summaryBoxes.innerHTML = "";
+  container.innerHTML = "";
+
+  // 🚨 Aucun résultat pour la combinaison de filtres
+  if (!filtered || filtered.length === 0) {
+    activeCharts.forEach(chart => chart.destroy());
+    activeCharts = [];
+    container.innerHTML = "<p style='color:red; text-align:center;'>Aucune donnée disponible pour ce filtre.</p>";
+    return;
+  }
+
+  // ✅ Si un élève unique sélectionné → affiche la synthèse A/B/C
+  if (eleveIndex !== "") {
+    syntheseBlock.style.display = "block";
     computeTableSynthese(filtered);
   } else {
-    syntheseBlock.style.display = 'none';
+    syntheseBlock.style.display = "none";
   }
-}
-    // 🔹 Avant d’afficher de nouveaux graphiques, on nettoie l’affichage précédent
-const container = document.getElementById("chartsContainer");
-container.innerHTML = "";
 
-// 🚨 Si aucune donnée filtrée, on vide tout et on affiche un message
-if (!filtered || filtered.length === 0) {
-  // Supprimer anciens graphiques
-  activeCharts.forEach(chart => chart.destroy());
-  activeCharts = [];
-
-  // Nettoyer le conteneur principal et les zones d'analyse
-  container.innerHTML = "<p style='color:red; text-align:center;'>Aucune donnée disponible pour ce filtre.</p>";
-  document.getElementById("synthese").innerHTML = "";
-  document.getElementById("summaryBoxes").innerHTML = "";
-
-  return;
-}
-  // ✅ Ajout clé : affichage des graphiques
+  // ✅ Enfin, on affiche les graphiques
   renderCharts(filtered);
-  }
+}
   
 function renderChart(canvas, data, questionIndex) {
   new Chart(canvas.getContext('2d'), {
