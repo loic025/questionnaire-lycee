@@ -367,11 +367,17 @@ if (syntheseBlock) {
 const container = document.getElementById("chartsContainer");
 container.innerHTML = "";
 
-  // 🚨 Si aucune donnée filtrée, on vide et on affiche un message
+// 🚨 Si aucune donnée filtrée, on vide tout et on affiche un message
 if (!filtered || filtered.length === 0) {
+  // Supprimer anciens graphiques
   activeCharts.forEach(chart => chart.destroy());
   activeCharts = [];
+
+  // Nettoyer le conteneur principal et les zones d'analyse
   container.innerHTML = "<p style='color:red; text-align:center;'>Aucune donnée disponible pour ce filtre.</p>";
+  document.getElementById("synthese").innerHTML = "";
+  document.getElementById("summaryBoxes").innerHTML = "";
+
   return;
 }
   // ✅ Ajout clé : affichage des graphiques
